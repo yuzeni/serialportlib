@@ -1,0 +1,8 @@
+*.o
+*.a
+*.so
+TODO.txt
+test.cpp
+test
+build_test.sh
+gipity*
