@@ -2,13 +2,30 @@
 module Serialportlib
 
 serialportlib = ""
-if Sys.iswindows()
-    error("Microsoft Windows is not supported by Serialportlib!")
-else
+if Sys.islinux()
     serialportlib = "$(@__DIR__)/libserialportlib.so"
+    if !isfile(serialportlib)
+        @info("'libserialportlib.so' not found in the folder which contains 'serialportlib.jl', building from source with GCC (g++)...")
+        try
+            # Change to directory of this file, build the shared libarary and go back to the original working directory
+            working_dir = pwd()
+            cd(@__DIR__)
+            run(`g++ -fPIC -fvisibility=hidden -ggdb -c -Wall -Wextra serialportlib.cpp`, wait=true)
+            run(`g++ -shared -o libserialportlib.so serialportlib.o`, wait=true)
+            cd(working_dir)
+        catch e
+            @error("Failed to build `libserialportlib.so`. Please include 'serialportlib.jl' again, after resolving the error(s).")
+        else
+            serialportlib = "$(@__DIR__)/libserialportlib.so"
+            @assert(isfile(serialportlib))
+            @info("Successfully built 'libserialportlib.so'!")
+        end
+    end
+else
+    @error("Your operating system with kernel '$(Sys.KERNEL)' is not supported by Serialportlib! Only Linux is supported.")
 end
 
-const SERIALPORTLIB_MAX_SERIALPORT_IDX = 1024
+const SERIALPORTLIB_MAX_SERIALPORT_IDX = 1000
 const DEFAULT_SP_IDX = 0
 
 @enum Serial_Port_Flags begin
@@ -52,9 +69,9 @@ end
 """
 Comsumes bytes from the serialport until it finds the delimiter. The next bytes read are the ones just after the delimiter.
 This is useful for when your data-stream becomes misaligned because a byte got missing etc.
-Important: Make sure your bytes-array for the delimiter is contiguous in memory!
+Important: Make sure your bytes-array for the delimiter is contiguous in memory! This is true for most, but not all vector-like types.
 """
-function serialport_skip_to_next_delimiter(delimiter::BytesVectorT; sp_idx=DEFAULT_SP_IDX)::Bool where { BytesVectorT <: AbstractVector{UInt8} }
+function skip_to_next_delimiter(delimiter::BytesVectorT; sp_idx=DEFAULT_SP_IDX)::Bool where { BytesVectorT <: AbstractVector{UInt8} }
     @ccall serialportlib.serialport_skip_to_next_delimiter(sp_idx::UInt32, delimiter::Ptr{Cvoid}, length(delimiter)::UInt64)::Bool
 end
 
@@ -62,7 +79,7 @@ function write_byte(byte; sp_idx=DEFAULT_SP_IDX)::Bool
     @ccall serialportlib.serialport_write_byte(sp_idx::UInt32, byte::UInt8)::Bool
 end
 
-"Important: Make sure your bytes-array for the delimiter is contiguous in memory!"
+"Important: Make sure your bytes-array for the delimiter is contiguous in memory! This is true for most, but not all vector-like types."
 function write_bytes(bytes::BytesVectorT; sp_idx=DEFAULT_SP_IDX)::UInt64 where { BytesVectorT <: AbstractVector{UInt8} }
     @ccall serialportlib.serialport_write_bytes(sp_idx::UInt32, bytes::Ptr{Cvoid}, length(bytes)::UInt64)::UInt64
 end

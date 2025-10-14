@@ -3,11 +3,11 @@
 
 Incomplete serial-port communication library for Linux.
 
-# Getting Started with Julia
+## Getting Started with Julia
 
 1. `git clone https://github.com/yuzeni/serialportlib.git`
-2. `cd serialplotlib`
-3. `./build_shared_lib.sh`
+2. `juila`
+3. `julia> include("./serialportlib/serialportlib.jl")`
 
-Now you should be able to include the file `serialplotlib.jl` from anywhere and use the library.  
-For even more convenience you can include the file directly in your `startup.jl`.
+The library is built automatically using GCC (g++) when its not found in the directory.  
+For even more convenience you can include `serialportlib.jl` directly in your `startup.jl`.
